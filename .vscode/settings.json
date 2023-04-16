@@ -1,0 +1,7 @@
+{
+	"files.associations": {
+		"*.md": "markdown",
+		"stdio.h": "c",
+		"socket.h": "c"
+	}
+}
