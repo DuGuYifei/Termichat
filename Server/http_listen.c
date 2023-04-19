@@ -126,7 +126,7 @@ void *listen_register()
 		}
 		else if(check == -1)
 		{
-			if (write(client_fd, "HTTP/1.1 403 ERROR\r\n\r\nWrong Password", 36) < 0)
+			if (write(client_fd, "HTTP/1.1 403 ERROR\r\n\r\nRoom exists and Wrong Password", 52) < 0)
 			{
 				perror("write failed");
 			}
