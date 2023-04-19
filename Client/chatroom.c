@@ -89,21 +89,13 @@ void send_msg(int client_fd, lock_args *lock_args, char *username, char *roomnam
 	free(msg);
 }
 
-void chatroom(char* username, char* roomname)
+void chatroom(char* username, char* roomname, int client_fd)
 {
 	// socket link to server
 	// multithread:
 	// 1. read msg
 	// 2. write msg
 	// lock print for multithread
-
-	// create socket
-	int client_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (client_fd == -1)
-	{
-		printf("socket error\n");
-		exit(EXIT_FAILURE);
-	}
 
 	// serverip:8081
 	struct sockaddr_in server_addr;
