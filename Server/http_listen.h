@@ -1,0 +1,1 @@
+void* listen_register();

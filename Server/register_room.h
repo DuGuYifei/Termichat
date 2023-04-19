@@ -1,0 +1,1 @@
+int register_room(char *roomnamme, char *password, int client_socket);
