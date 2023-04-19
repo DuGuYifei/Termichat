@@ -46,14 +46,15 @@ void send_register(char *msg)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("%s\n", buffer);
+	printf("---------------\n%s\n", buffer);
 	if(buffer[13] == 'O' && buffer[14] == 'K')
 	{
-		printf("Register success\n");
+		printf("Register success\n---------------\n\n");
 	}
 	else
 	{
-		printf("Register failed\n");
+		printf("Register failed\n\n");
+		exit(EXIT_FAILURE);
 	}
 
 	close(client_fd);

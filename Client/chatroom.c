@@ -14,40 +14,42 @@
 
 const char file_name[] = "chat.txt";
 
-typedef struct file_lock_fd file_lock_fd;
-struct file_lock_fd
+typedef struct lock_args lock_args;
+struct lock_args
 {
-	FILE *fp;
 	pthread_mutex_t mutex;
 	int fd;
+	char* username;
 	char is_finish;
 };
 
 void *read_msg(void *arg)
 {
-	file_lock_fd *file = (file_lock_fd *)arg;
+	lock_args *args = (lock_args *)arg;
 
 	message* msg = (message*)malloc(sizeof(message));
 
 	while (1)
 	{	
-		pthread_mutex_lock(&file->mutex);
-		if(file->is_finish == 't')
+		if(args->is_finish == 't')
 		{
-			pthread_mutex_unlock(&file->mutex);
 			break;
 		}
-		if(read(file->fd, msg, MAX_BUFFER_SIZE) < 0)
+		if(read(args->fd, msg, MAX_BUFFER_SIZE) < 0)
 		{
-			pthread_mutex_unlock(&file->mutex);
 			continue;
 		}
 		else
 		{
-			// write to file
+			if(strcmp(msg->username, args->username) == 0)
+			{
+				continue;
+			}
+
 			// lock the fp for multithread
-			fprintf(file->fp, "%s: %s\n", msg->username, msg->message);
-			pthread_mutex_unlock(&file->mutex);
+			pthread_mutex_lock(&args->mutex);
+			printf("\033[1G%s: %s\n", msg->username, msg->message);
+			pthread_mutex_unlock(&args->mutex);
 			memset(msg, 0, MAX_BUFFER_SIZE);
 		}
 	}
@@ -55,7 +57,7 @@ void *read_msg(void *arg)
 	pthread_exit(NULL);
 }
 
-void send_msg(int client_fd, file_lock_fd *file, char *username, char *roomname)
+void send_msg(int client_fd, lock_args *lock_args, char *username, char *roomname)
 {
 	// send msg to server
 	message* msg = (message*)malloc(sizeof(message));
@@ -63,19 +65,21 @@ void send_msg(int client_fd, file_lock_fd *file, char *username, char *roomname)
 	strcpy(msg->roomname, roomname);
 	while (1)
 	{
-		scanf("%s", msg->message);
+		fgets(msg->message, MAX_BUFFER_SIZE, stdin);
+		if(strcmp(msg->message, "\n") == 0)
+		{
+			continue;
+		}
 		if(strcmp(msg->message, FINISH_SIGN) == 0)
 		{
-			pthread_mutex_lock(&file->mutex);
-			file->is_finish = 't';
-			pthread_mutex_unlock(&file->mutex);
+			lock_args->is_finish = 't';
 			break;
 		}
-		// write to file
+
 		// lock the fp for multithread
-		pthread_mutex_lock(&file->mutex);
-		fprintf(file->fp, "[SEDING] %s: %s\n", msg->username, msg->message);
-		pthread_mutex_unlock(&file->mutex);
+		pthread_mutex_lock(&lock_args->mutex);
+		printf("\033[F\033[K%s: %s\n", msg->username, msg->message);
+		pthread_mutex_unlock(&lock_args->mutex);
 		
 		write(client_fd, msg, MAX_BUFFER_SIZE);
 		shutdown(client_fd, SHUT_WR);
@@ -89,9 +93,10 @@ void chatroom(char* username, char* roomname)
 {
 	// socket link to server
 	// multithread:
-	// 1. read msg from server and write into "chat.txt" file
-	// 2. write msg from console to send to server, and write into "chat.txt" file
-	// lock file for multithread
+	// 1. read msg
+	// 2. write msg
+	// lock print for multithread
+
 	// create socket
 	int client_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (client_fd == -1)
@@ -104,8 +109,8 @@ void chatroom(char* username, char* roomname)
 	struct sockaddr_in server_addr;
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(8081);
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server_addr.sin_port = htons(SERVER_PORT_CHAT);
+	server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
 
 	// connet
 	if (connect(client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
@@ -114,26 +119,20 @@ void chatroom(char* username, char* roomname)
 		exit(EXIT_FAILURE);
 	}
 
-	// create a file_lock_fd struct
-	file_lock_fd *file = (file_lock_fd *)malloc(sizeof(file_lock_fd));
-	file->fp = fopen(file_name, "a");
-	if (file->fp == NULL)
-	{
-		printf("open file error\n");
-		exit(EXIT_FAILURE);
-	}
-	pthread_mutex_init(&file->mutex, NULL);
-	file->is_finish = 'f';
+	// create a lock_args struct
+	lock_args *args = (lock_args *)malloc(sizeof(lock_args));
+	pthread_mutex_init(&args->mutex, NULL);
+	args->is_finish = 'f';
+	args->fd = client_fd;
 
 	// create a new thread to read msg from server
 	pthread_t thread;
-	pthread_create(&thread, NULL, read_msg, (void *)file);
+	pthread_create(&thread, NULL, read_msg, (void *)args);
 
 	// send msg to server
-	send_msg(client_fd, file, username, roomname);
+	send_msg(client_fd, args, username, roomname);
 
 	pthread_join(thread, NULL);
 	close(client_fd);
-	fclose(file->fp);
-	free(file);
+	free(args);
 }

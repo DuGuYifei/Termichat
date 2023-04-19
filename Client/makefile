@@ -2,4 +2,4 @@ client.out: main.c
 	gcc *.c -o $@ -pthread
 
 clean:
-	rm -f client
+	rm -f client.out
