@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "http_listen.h"
 #include "register_room.h"
 #include "param.h"
@@ -36,7 +37,7 @@ int distinguish_http_request(char *buffer, int client_fd)
 		// if user or room
 		if (strcmp(key, "user") == 0)
 		{
-			printf("%s:%s\n", key, value);
+			// printf("%s:%s\n", key, value);
 
 			// handle user register to database in the future
 			// TODO
@@ -44,17 +45,18 @@ int distinguish_http_request(char *buffer, int client_fd)
 		}
 		else if (strcmp(key, "room") == 0)
 		{
-			printf("%s:%s\n", key, value);
+			// printf("%s:%s\n", key, value);
 
 			// next line is the room password
 			token = strtok(buffer + idx, "\r");
 			idx += strlen(token) + 2;
 			psd_value = strtok(token, ":");
 			psd_value = strtok(NULL, "\0");
-			printf("psd:%s\n", psd_value);
+			// printf("psd:%s\n", psd_value);
 
 			// handle room register
-			return register_room(value, psd_value, client_fd)? 1 : -1;
+			int token = register_room(value, psd_value);
+			return token > 0 ? token : -1;
 		}
 	}
 	return 0;
@@ -93,9 +95,10 @@ void *listen_register()
 	// accept
 	int client_fd;
 	struct sockaddr_in client_addr;
-	char buffer[MAX_BUFFER_SIZE] = {0};
 	socklen_t client_addr_len = sizeof(client_addr);
-	int check = 0;
+	char buffer[MAX_BUFFER_SIZE] = {0};
+	char token_str[30] = {0};
+	int token = 0;
 	while (client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len))
 	{
 		if (client_fd < 0)
@@ -110,26 +113,28 @@ void *listen_register()
 			{
 				perror("write failed");
 			}
-			close(client_fd);
 			perror("read failed");
 			continue;
 		}
 
-		//printf("%s\n", buffer);
-		check = distinguish_http_request(buffer, client_fd);
-		if (check == 1)
+		token = distinguish_http_request(buffer, client_fd);
+		if (token > 0)
 		{
-			if (write(client_fd, "HTTP/1.1 200 OK\r\n\r\n", 19) < 0)
+			// add token after HTTP/1.1 200 OK\r\n\r\n
+			sprintf(token_str, "HTTP/1.1 200 OK\r\n\r\n%d", token);
+			if (write(client_fd, token_str, strlen(token_str)) < 0)
 			{
 				perror("write failed");
 			}
+			memset(token_str, 0, 30);
 		}
-		else if(check == -1)
+		else if (token == -1)
 		{
 			if (write(client_fd, "HTTP/1.1 403 ERROR\r\n\r\nRoom exists and Wrong Password", 52) < 0)
 			{
 				perror("write failed");
 			}
+			printf("Room exists and Wrong Password\n");
 		}
 		else
 		{
@@ -137,13 +142,10 @@ void *listen_register()
 			{
 				perror("write failed");
 			}
+			printf("502 ERROR\n");
 		}
-
-		memset(buffer, 0, MAX_BUFFER_SIZE);
-
-		// printf("%d\n", client_addr.sin_addr.s_addr);
-
 		close(client_fd);
+		memset(buffer, 0, MAX_BUFFER_SIZE);
 	}
 
 	close(server_fd);

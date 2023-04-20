@@ -3,9 +3,9 @@
 #include "register_room.h"
 #include "database_mock.h"
 
-// sucess: 1
+// sucess: >= 1 (room token)
 // fail: 0
-int register_room(char *roomname, char *password, int client_socket)
+int register_room(char *roomname, char *password)
 {
 	pthread_mutex_lock(&room_list_mutex);
 	int room_num = 0;
@@ -23,10 +23,8 @@ int register_room(char *roomname, char *password, int client_socket)
 			{
 				if (strcmp(room_list[i]->password, password) == 0)
 				{
-					// TODO
-					client_list_add(room_list[i]->client_list, client_socket);
 					pthread_mutex_unlock(&room_list_mutex);
-					return 1;
+					return room_list[i]->token;
 				}
 				else
 				{
@@ -46,7 +44,7 @@ int register_room(char *roomname, char *password, int client_socket)
 	room_list[room_num - 1] = (room *)malloc(sizeof(room));
 	strcpy(room_list[room_num - 1]->roomname, roomname);
 	strcpy(room_list[room_num - 1]->password, password);
-	client_list_add(room_list[room_num - 1]->client_list, client_socket);
+	room_list[room_num - 1]->token = room_num;
 	pthread_mutex_unlock(&room_list_mutex);
-	return 1;
+	return room_list[room_num - 1]->token;
 }

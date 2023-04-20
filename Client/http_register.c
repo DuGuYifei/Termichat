@@ -8,8 +8,16 @@
 #include "http_register.h"
 #include "param.h"
 
-void send_register(char *msg, int client_fd)
+int send_register(char *msg)
 {
+	// create socket
+	int client_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (client_fd == -1)
+	{
+		printf("socket error\n");
+		exit(EXIT_FAILURE);
+	}
+
 	// serverip:8080
 	struct sockaddr_in server_addr;
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -48,5 +56,6 @@ void send_register(char *msg, int client_fd)
 		printf("Register failed\n\n");
 		exit(EXIT_FAILURE);
 	}
-
+	close(client_fd);
+	return atoi(buffer + 19);
 }

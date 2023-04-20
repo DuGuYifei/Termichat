@@ -1,1 +1,1 @@
-void send_register(char* msg, int client_fd);
+int send_register(char* msg);

@@ -1,1 +1,1 @@
-void chatroom(char* username, char* roomname, int client_fd);
+void chatroom(char* username, int token);
