@@ -65,6 +65,10 @@ void *handle_client(void *c_fd)
 
 		printf("%s\n", msg->message);
 
+		if(strcmp(msg->message, "!q") == 0){
+			break;
+		}
+
 		// send to all clients in this room
 		pthread_mutex_lock(&room_list_mutex);
 		check = send_to_all(room, msg, client_fd);

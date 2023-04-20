@@ -83,6 +83,9 @@ void send_msg(int client_fd, lock_args *lock_args, char *username, int token)
 		{
 			printf("Bye!\n");
 			// in case read thread stuck in read()
+			strcpy(msg->message, "I'm leaving!\n");
+			write(client_fd, msg, MAX_BUFFER_SIZE);
+			strcpy(msg->message, "!q");
 			write(client_fd, msg, MAX_BUFFER_SIZE);
 			lock_args->is_finish = 't';
 			break;
