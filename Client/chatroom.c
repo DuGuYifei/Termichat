@@ -51,7 +51,11 @@ void *read_msg(void *arg)
 			}
 			// lock the fp for multithread
 			pthread_mutex_lock(&args->mutex);
-			printf("\033[F\033[K%s: %s\n", msg->username, msg->message);
+			if(msg->message[strlen(msg->message)-1] == '\n')
+			{
+				msg->message[strlen(msg->message)-1] = '\0';
+			}
+			printf("\n\033[46m%s: %s\033[0m\n", msg->username, msg->message);
 			pthread_mutex_unlock(&args->mutex);
 			memset(msg, 0, MAX_BUFFER_SIZE);
 		}
@@ -67,8 +71,8 @@ void send_msg(int client_fd, lock_args *lock_args, char *username, int token)
 	strcpy(msg->username, username);
 	msg->token = token;
 	// help server first time to link this person and add his fd to room which is found by token in the msg
-	strcpy(msg->message, "Hello! I'm new here!\n");
-	printf("%s: %s\n", username, msg->message);
+	strcpy(msg->message, "Hello! I'm new here!");
+	printf("\033[F\033[K%s: %s\n", username, msg->message);
 	write(client_fd, msg, MAX_BUFFER_SIZE);
 	memset(msg->message, 0, MAX_BUFFER_SIZE);
 
@@ -81,9 +85,9 @@ void send_msg(int client_fd, lock_args *lock_args, char *username, int token)
 		}
 		if (strcmp(msg->message, FINISH_SIGN) == 0)
 		{
-			printf("Bye!\n");
+			printf("Bye!");
 			// in case read thread stuck in read()
-			strcpy(msg->message, "I'm leaving!\n");
+			strcpy(msg->message, "I'm leaving!");
 			write(client_fd, msg, MAX_BUFFER_SIZE);
 			strcpy(msg->message, "!q");
 			write(client_fd, msg, MAX_BUFFER_SIZE);
@@ -93,7 +97,7 @@ void send_msg(int client_fd, lock_args *lock_args, char *username, int token)
 
 		// lock the fp for multithread
 		pthread_mutex_lock(&lock_args->mutex);
-		printf("\033[F\033[K%s: %s\n", msg->username, msg->message);
+		printf("\033[F\033[K%s: %s", msg->username, msg->message);
 		pthread_mutex_unlock(&lock_args->mutex);
 
 		write(client_fd, msg, MAX_BUFFER_SIZE);
@@ -142,13 +146,13 @@ void chatroom(char *username, int token)
 	args->username = username;
 
 	// create a new thread to read msg from server
-	pthread_t thread;
-	pthread_create(&thread, NULL, read_msg, (void *)args);
+	pthread_t read_thread;
+	pthread_create(&read_thread, NULL, read_msg, (void *)args);
 
 	// send msg to server
 	send_msg(client_fd, args, username, token);
 
-	pthread_join(thread, NULL);
+	pthread_join(read_thread, NULL);
 	close(client_fd);
 	free(args);
 }
