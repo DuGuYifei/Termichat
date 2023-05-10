@@ -8,10 +8,11 @@ client_node *client_list_init()
 	return client_list;
 }
 
-client_node *client_list_add(client_node *client_list, int client_fd)
+client_node *client_list_add(client_node *client_list, int client_fd, int pipe_fd[2])
 {
 	client_node *new_node = (client_node *)malloc(sizeof(client_node));
 	new_node->client_fd = client_fd;
+	new_node->pipe_fd = pipe_fd;
 	new_node->next = client_list;
 	client_list = new_node;
 	return client_list;
