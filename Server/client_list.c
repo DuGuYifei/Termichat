@@ -39,3 +39,14 @@ client_node* client_list_remove(client_node *client_list, int client_fd)
 	}
 	return client_list;
 }
+
+int client_list_contain(client_node * client_list, int client_fd){
+	client_node *cur = client_list;
+	while(cur != NULL){
+		if(cur->client_fd == client_fd){
+			return 1;
+		}
+		cur = cur->next;
+	}
+	return 0;
+}
